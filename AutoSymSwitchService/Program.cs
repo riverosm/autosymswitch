@@ -9,17 +9,27 @@ namespace AutoSymSwitchService
 {
     static class Program
     {
-        /// <summary>
-        /// The main entry point for the application.
-        /// </summary>
         static void Main()
         {
+            /* CMR TODO
+             * Devolución de jsons con status + texto de error
+             * Código 404 / 500 por defecto con json
+             * Habilitar HTTPS
+             * Migrar todo a POST en vez de GET
+             */
+
+#if DEBUG
+            AutoSymSwitchService myservice = new AutoSymSwitchService();
+            myservice.OnDebug();
+            System.Threading.Thread.Sleep(System.Threading.Timeout.Infinite);
+#else
             ServiceBase[] ServicesToRun;
             ServicesToRun = new ServiceBase[]
             {
                 new AutoSymSwitchService()
             };
             ServiceBase.Run(ServicesToRun);
+#endif
         }
     }
 }

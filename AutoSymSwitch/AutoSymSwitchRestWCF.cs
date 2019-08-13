@@ -1,46 +1,83 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
 using System.ServiceModel;
-using System.Text;
+using System.ServiceModel.Channels;
+using System.ServiceModel.Web;
 
 namespace AutoSymSwitch
 {
-    // NOTE: You can use the "Rename" command on the "Refactor" menu to change the class name "AutoSymSwitchRestWCF" in both code and config file together.
     public class AutoSymSwitchRestWCF : IAutoSymSwitchRestWCF
     {
-        public string GetData(int value)
+        SymetrixControl Symetrix;
+        string fromConnectedIP;
+
+        public AutoSymSwitchRestWCF ()
         {
-            return string.Format("You entered: {0}", value);
+            OperationContext context = OperationContext.Current;
+            MessageProperties messageProperties = context.IncomingMessageProperties;
+            RemoteEndpointMessageProperty endpointProperty =
+              messageProperties[RemoteEndpointMessageProperty.Name] as RemoteEndpointMessageProperty;
+
+            fromConnectedIP = endpointProperty.Address;
+
+            new Logger().WriteToFile(AccessLog());
         }
 
-        public CompositeType GetDataUsingDataContract(CompositeType composite)
+        public ResponseStatusWithoutInfo getPreset (string token)
         {
-            if (composite == null)
+            try
             {
-                throw new ArgumentNullException("composite");
+                Symetrix = new SymetrixControl(fromConnectedIP, token);
             }
-            if (composite.BoolValue)
+            catch (Exception ex)
             {
-                composite.StringValue += "Suffix";
+                return new ResponseStatusWithoutInfo(new ResponseStatus("401", ex.Message));
             }
-            return composite;
+
+            return Symetrix.controlSymetrix("getPreset");
         }
 
-        public string XMLData(string id)
+        public ResponseStatusWithoutInfo setPreset (string token, string newPreset)
         {
-            return Data(id);
-        }
-        public string JSONData(string id)
-        {
-            return Data(id);
+            try
+            {
+                Symetrix = new SymetrixControl(fromConnectedIP, token, newPreset);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseStatusWithoutInfo(new ResponseStatus("401", ex.Message));
+            }
+
+            // return mySimetrix.controlSymetrix("setPreset", token, newPreset);
+            // return new ResponseStatusWithoutInfo(mySimetrix.controlSymetrix("setPreset", token, newPreset));
+            return Symetrix.controlSymetrix("setPreset", newPreset);
         }
 
-        private string Data(string id)
+        public ResponseStatusWithInfo getInfo (string token)
         {
-            // logic
-            return "Data: " + id;
+            try
+            {
+                Symetrix = new SymetrixControl(fromConnectedIP, token);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseStatusWithInfo(new ResponseStatus("401", ex.Message), null);
+            }
+
+            return Symetrix.getInfo();
         }
-    }
+
+        public ResponseStatusWithoutInfo notFound()
+        {
+            return new ResponseStatusWithoutInfo(new ResponseStatus("404", "Resource not found"));
+        }
+
+        private string AccessLog()
+        {
+            WebOperationContext context = WebOperationContext.Current;
+            string RequestUrl = context.IncomingRequest.UriTemplateMatch.RequestUri.OriginalString;
+            string Method = context.IncomingRequest.Method;
+
+            return fromConnectedIP + " - " + Method + " " + RequestUrl;
+        }
+   }
 }

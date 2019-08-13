@@ -1,56 +1,120 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Net;
+using System.Runtime.Serialization;
 using System.ServiceModel;
 using System.ServiceModel.Web;
 
 namespace AutoSymSwitch
 {
-    // NOTE: You can use the "Rename" command on the "Refactor" menu to change the interface name "IAutoSymSwitchRestWCF" in both code and config file together.
     [ServiceContract]
     public interface IAutoSymSwitchRestWCF
     {
         [OperationContract]
-        string GetData(int value);
-
-        [OperationContract]
-        CompositeType GetDataUsingDataContract(CompositeType composite);
-
-        // TODO: Add your service operations here
-
-        [OperationContract]
         [WebInvoke(Method = "GET",
-            ResponseFormat = WebMessageFormat.Xml,
-            BodyStyle = WebMessageBodyStyle.Wrapped,
-            UriTemplate = "xml/{id}")]
-        string XMLData(string id);
-
-        [OperationContract]
-        [WebInvoke(Method = "GET",
+            RequestFormat = WebMessageFormat.Json,
             ResponseFormat = WebMessageFormat.Json,
-            BodyStyle = WebMessageBodyStyle.Wrapped,
-            UriTemplate = "json/{id}")]
-        string JSONData(string id);
+            BodyStyle = WebMessageBodyStyle.WrappedResponse,
+            UriTemplate = "getInfo?token={token}")]
+        [return: MessageParameter(Name = "SymetrixResult")]
+        ResponseStatusWithInfo getInfo(string token);
+
+        [OperationContract]
+        [WebInvoke(Method = "GET",
+            RequestFormat = WebMessageFormat.Json,
+            ResponseFormat = WebMessageFormat.Json,
+            UriTemplate = "getPreset?token={token}")]
+        [return: MessageParameter(Name = "SymetrixResult")]
+        ResponseStatusWithoutInfo getPreset(string token);
+
+        [OperationContract]
+        [WebInvoke(Method = "GET",
+            RequestFormat = WebMessageFormat.Json,
+            ResponseFormat = WebMessageFormat.Json,
+            UriTemplate = "setPreset?token={token}&newPreset={newPreset}")]
+        [return: MessageParameter(Name = "SymetrixResult")]
+        ResponseStatusWithoutInfo setPreset(string token, string newPreset);
+
+        [OperationContract]
+        [WebInvoke(Method = "*",
+            RequestFormat = WebMessageFormat.Json,
+            ResponseFormat = WebMessageFormat.Json,
+            BodyStyle = WebMessageBodyStyle.WrappedResponse,
+            UriTemplate = "*")]
+        [return: MessageParameter(Name = "SymetrixResult")]
+        ResponseStatusWithoutInfo notFound();
     }
 
-    // Use a data contract as illustrated in the sample below to add composite types to service operations.
-    // You can add XSD files into the project. After building the project, you can directly use the data types defined there, with the namespace "AutoSymSwitch.ContractType".
     [DataContract]
-    public class CompositeType
+    public class ResponseStatus
     {
-        bool boolValue = true;
-        string stringValue = "Hello ";
+        public ResponseStatus() { }
 
-        [DataMember]
-        public bool BoolValue
+        public ResponseStatus(string status, string desc)
         {
-            get { return boolValue; }
-            set { boolValue = value; }
-        }
+            code = status;
+            description = desc;
 
-        [DataMember]
-        public string StringValue
-        {
-            get { return stringValue; }
-            set { stringValue = value; }
+            WebOperationContext context = WebOperationContext.Current;
+            HttpStatusCode HttpStatus;
+
+            bool isError = true;
+
+            switch (status)
+            {
+                case "200":
+                    HttpStatus = HttpStatusCode.OK;
+                    isError = false;
+                    break;
+                case "400":
+                    HttpStatus = HttpStatusCode.BadRequest;
+                    break;
+                case "401":
+                    HttpStatus = HttpStatusCode.Unauthorized;
+                    break;
+                case "404":
+                    HttpStatus = HttpStatusCode.NotFound;
+                    break;
+                case "500":
+                    HttpStatus = HttpStatusCode.InternalServerError;
+                    break;
+                default:
+                    HttpStatus = HttpStatusCode.NotImplemented;
+                    break;
+            }
+
+            context.OutgoingResponse.StatusCode = HttpStatus;
+
+            new Logger().WriteToFile(status + " - " + desc, isError);
         }
+        [DataMember]
+        public string code { get; set; }
+        [DataMember]
+        public string description { get; set; }
+        // public List<ResponseStatus> Items { get; set; }
+    }
+
+    [DataContract]
+    public class ResponseStatusWithInfo
+    {
+        public ResponseStatusWithInfo(ResponseStatus st, SymetrixInfo si)
+        {
+            status = st;
+            information = si;
+        }
+        [DataMember]
+        public ResponseStatus status { get; set; }
+        [DataMember]
+        public SymetrixInfo information { get; set; }
+    }
+
+    [DataContract]
+    public class ResponseStatusWithoutInfo
+    {
+        public ResponseStatusWithoutInfo(ResponseStatus st)
+        {
+            status = st;
+        }
+        [DataMember]
+        public ResponseStatus status { get; set; }
+
     }
 }

@@ -46,8 +46,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IAutoSymSwitchRestWCF.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AutoSymSwitchRestWCF.cs" />
+    <Compile Include="SymetrixControl.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

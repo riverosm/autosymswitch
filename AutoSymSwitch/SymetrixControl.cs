@@ -9,12 +9,12 @@ namespace AutoSymSwitch
 {
     public class SymetrixControl
     {
-        private String SYMETRIX_IP = "192.168.0.6";
-        private int SYMETRIX_PORT = 8000;
+        private String SYMETRIX_IP = "169.254.164.244";
+        private int SYMETRIX_PORT = 48631;
         private int SYMETRIX_READ_TIMEOUT = 5000;
-        private int[] SYMETRIX_ALLOWED_PRESETS = { 1, 2, 3 };
-        private string[] SYMETRIX_PRESETS_NAMES = { "Preset #1", "Preset #2", "Preset #3" };
-        private String[] SYMETRIX_ALLOWED_IPS = { "192.168.0.20", "192.168.0.6" };
+        private int[] SYMETRIX_ALLOWED_PRESETS = { 1, 2 };
+        private string[] SYMETRIX_PRESETS_NAMES = { "Preset #1", "Preset #2" };
+        private String[] SYMETRIX_ALLOWED_IPS = { "192.168.0.92", "169.254.164.245" };
         private String SYMETRIX_VALID_TOKEN = "1212";
         private String SYMETRIX_EOF = "\r\n";
         private TcpClient symetrixConnection;
@@ -134,8 +134,8 @@ namespace AutoSymSwitch
                 String responseData = String.Empty;
                 int bytes = stream.Read(recvData, 0, recvData.Length);
                 responseData = System.Text.Encoding.ASCII.GetString(recvData, 0, bytes);
-                new Logger().WriteToFile("recvData: " + responseData.Replace(SYMETRIX_EOF, ""));
-                return responseData;
+                new Logger().WriteToFile("recvData: " + responseData.Replace("\r", ""));
+                return responseData.Replace("\r", "");
             }
             catch (Exception ex)
             {
@@ -153,10 +153,10 @@ namespace AutoSymSwitch
 
                 // TODO - getPresetNumber not ACK
 
-                if (recvDataReal != "ACK" + SYMETRIX_EOF)
+                if (recvDataReal.Length != 4 || !isValidPreset(recvDataReal))
                 {
-                    new Logger().WriteToFile("getPreset - recvData expected: 'ACK' - received: '" + recvDataReal + "'", true);
-                    throw new System.Exception("getPreset - Invalid response from Symetrix");
+                    new Logger().WriteToFile("getPreset - recvData expected: 'Valid preset' - received: '" + recvDataReal + "'", true);
+                    throw new System.Exception("getPreset - Invalid preset received from Symetrix");
                 }
 
                 return string.Format(String.Format("{0,4:0000}", recvDataReal));
@@ -179,7 +179,7 @@ namespace AutoSymSwitch
 
                 for (int i = 0; i < sendData.Length; i++)
                 {
-                    this.sendData(sendData[i]);
+                    this.sendData(sendData[i] + SYMETRIX_EOF);
 
                     recvDataReal = this.recvData();
 
